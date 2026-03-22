@@ -64,6 +64,7 @@ clear sym_x sym_eta;
 syms sym_eta sym_x;
 sym_eta=sym_x/sqrt(1-sym_x^2);
 %sym_eta=sym_x/sqrt(1+sym_x^2);
+deta_dx_sym=diff(sym_eta);
 
 x=y_diff_full.y_list;
 D1=y_diff_full.D1;
@@ -109,6 +110,13 @@ D4_unbounded_full=diag(dx_deta.^4)*D4...
 % D4_unbounded_full=(-4*diag(eta-ymin)*D3_unbounded_full-4*diag(eta-ymax)*D3_unbounded_full...
 %             -12*D2_unbounded_full-diag((eta-ymin).*(eta-ymax))*D4_unbounded_full)*S;
 
+%%Modify the integration for the Boundary layer
+weight_full=y_diff_full.weight;
+deta_dx=double(subs(deta_dx_sym,x(2:end-1)));
+deta_dx=[0; deta_dx; 0];
+weight_unbounded_full=weight_full.*deta_dx;
+Iw_root_unbounded_full=sqrtm(diag(weight_unbounded_full));
+
 y_list_unbounded_list=eta;
 
 %%Set up the output
@@ -117,13 +125,20 @@ y_diff_unbounded_full.D1=D1_unbounded_full;
 y_diff_unbounded_full.D2=D2_unbounded_full;
 y_diff_unbounded_full.D3=D3_unbounded_full;
 y_diff_unbounded_full.D4=D4_unbounded_full;
+y_diff_unbounded_full.Iw_root=Iw_root_unbounded_full;
+y_diff_unbounded_full.weight=weight_unbounded_full;
+y_diff_unbounded_full.residue_D4_bc=0;
+y_diff_unbounded_full.residue_y_list=0;
 
 y_diff_unbounded_bc.y_list=y_list_unbounded_list(2:end-1);
 y_diff_unbounded_bc.D1=D1_unbounded_full(2:end-1,2:end-1);
 y_diff_unbounded_bc.D2=D2_unbounded_full(2:end-1,2:end-1);
 y_diff_unbounded_bc.D3=D3_unbounded_full(2:end-1,2:end-1);
 y_diff_unbounded_bc.D4=D4_unbounded_full(2:end-1,2:end-1);
-
+y_diff_unbounded_bc.Iw_root=Iw_root_unbounded_full(2:end-1,2:end-1);
+y_diff_unbounded_bc.weight=weight_unbounded_full(2:end-1);
+y_diff_unbounded_bc.residue_D4_bc=0;
+y_diff_unbounded_bc.residue_y_list=0;
 
     
 end

@@ -14,8 +14,8 @@ flag.rotation_list=0; %In this code, all rotation number is zero.
 
 flag.asymptotic=1;
 
-%flag.post='eig_stratified_spanwise_tanh_DCB_figure4a'; 
-flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
+flag.post='eig_stratified_spanwise_tanh_DCB_figure4a'; 
+%flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
 
 if strcmp(flag.post,'eig_stratified_FFLWL_figure5a_validation')
     
@@ -491,18 +491,14 @@ if flag.asymptotic
         
         
         for y_ind=1:Ny_full-2
-            %to check directly performing the integration also match p_kz0
-            %computed from x-momentum equation. p_kz0_int is not used. 
             p_kz0_int(y_ind)=sum(dpdy_kz0(y_ind:end).*y_diff_unbounded_bc.weight(y_ind:end));
         end
 
-        int_weight=y_diff_unbounded_bc.weight; %integration weight. 
+        int_weight=y_diff_unbounded_bc.weight;
         den=sum((dpdy_kz0.^2+kx_list^2*p_kz0.^2)./(U_bar-c_kz0).^3.*int_weight);
-        c1_const=kx_list^2/2*sum(p_kz0.^2.*int_weight)/den; %formula of c1 without kz^2
+        c1_const=kx_list^2/2*sum(p_kz0.^2.*int_weight)/den;
         
-        c1_const_list(Ri_ind)=c1_const; 
-
-        c1_asymptotic=c1_const*kz_list.^2; %c1 as a function of kz
+        c1_asymptotic=c1_const*kz_list.^2;
         Fr2=1/flag.Ri_bulk_list(Ri_ind);
         c_asymptotic=c_kz0+Fr2*c1_asymptotic;
         lambda_asymptotic{Ri_ind}=-1i*kx_list*c_asymptotic;
@@ -523,13 +519,12 @@ if flag.asymptotic
         data{6}.x=DCB_figure4a_Fh005(:,1);
         data{6}.y=DCB_figure4a_Fh005(:,2);
 
-        %asymptotic prediction based on Eq. (65) 
         data{7}.x=kz_list;
-        data{7}.y=real(lambda_asymptotic{1});
+        data{7}.y=lambda_asymptotic{1};
         data{8}.x=kz_list;
-        data{8}.y=real(lambda_asymptotic{2});
-        data{9}.x=kz_list;
-        data{9}.y=real(lambda_asymptotic{3});
+        data{8}.y=lambda_asymptotic{1};
+        data{7}.x=kz_list;
+        data{7}.y=lambda_asymptotic{1};
 
         plot_config.Markerindex=3;
         plot_config.loglog=[0,0];
@@ -538,8 +533,8 @@ if flag.asymptotic
         plot_config.xlim_list=[1,0,20];
         plot_config.xtick_list=[1,0,5,10,15,20];
         plot_config.user_color_style_marker_list={'k-','r-','b-','k^','rsquare','bo','k--','r--','b--'};
-        plot_config.label_list={1,'$k_z$','$\lambda$'};
-        plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_DCB_figure4a_asymptotic','.png'];
+        plot_config.label_list={1,'$k_z$','$\sigma$'};
+        plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_DCB_figure4a','.png'];
         plot_line(data,plot_config);
         
     end 
