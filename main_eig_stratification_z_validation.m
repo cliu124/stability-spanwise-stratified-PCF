@@ -14,8 +14,8 @@ flag.rotation_list=0; %In this code, all rotation number is zero.
 
 flag.asymptotic=1;
 
-%flag.post='eig_stratified_spanwise_tanh_DCB_figure4a'; 
-flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
+flag.post='eig_stratified_spanwise_tanh_DCB_figure4a'; 
+% flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
 
 if strcmp(flag.post,'eig_stratified_FFLWL_figure5a_validation')
     
