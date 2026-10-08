@@ -17,10 +17,11 @@ flag.asymptotic_low_Pr=0;
 
 %flag.post='eig_stratified_spanwise_tanh_DCB_figure4a'; 
 %flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
-flag.post='eig_stratified_spanwise_tanh_growth_rate_kx';
+%flag.post='eig_stratified_spanwise_tanh_growth_rate_kx';
 
+%flag.post='eig_stratified_spanwise_tanh_asymptotic';
+flag.post='eig_stratified_spanwise_bickley_asymptotic'; 
 %flag.post='eig_stratified_spanwise_bickley_CLDM_figure1';
-
 
 if strcmp(flag.post,'eig_stratified_FFLWL_figure5a_validation')
     
@@ -112,6 +113,46 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_CLDM_figure1')
     Fh_kz_list=linspace(0.01,4,60);
     Ny_full=202;
     flag.mean='bickley_jet';
+elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_asymptotic')
+    flag.Re_list=[100000];
+    %flag.Pr_list=[0.000001];
+    flag.Pr_list=1;
+    %flag.Pr_list=1e-5;
+    %flag.Pr_list=1e-6;
+    flag.Ri_bulk_list=1./[1,0.1,0.05].^2;
+    kx_list=0.4449;
+    if flag.Pr_list<0.01
+        kz_list=linspace(0,5,100);
+        flag.asymptotic_low_Pr=1;
+        flag.asymptotic=0;
+    else
+        kz_list=linspace(0,18,100);
+        flag.asymptotic_low_Pr=0;
+        flag.asymptotic=1;
+    end
+    Ny_full=202; %%32.
+    flag.mean='tanh';
+elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+    flag.Re_list=[1e8];
+    %flag.Pr_list=[0.000001];
+    flag.Pr_list=1;
+    %flag.Pr_list=1e-5;
+    %flag.Pr_list=1e-6;
+    flag.Ri_bulk_list=1./[1,0.1,0.05].^2;
+    kx_list=0.9021;
+    if flag.Pr_list<0.01
+        flag.asymptotic_low_Pr=1;
+        flag.asymptotic=0;
+    else
+
+        flag.asymptotic_low_Pr=0;
+        flag.asymptotic=1;
+    end
+    Fh_kz_list=linspace(0,4,100); % Common horizontal coordinate Fr*kz.
+    kz_list=Fh_kz_list; % Converted to physical kz separately for each Fr.
+
+    Ny_full=202; %%32.
+    flag.mean='bickley_jet';
 
 else
     error('Wrong flag.post')
@@ -194,7 +235,7 @@ for re_ind=1:length(flag.Re_list)
         rotation=flag.rotation_list(rotation_ind);
         for Ri_ind=1:length(flag.Ri_bulk_list)
             Ri_bulk=flag.Ri_bulk_list(Ri_ind);
-            if strcmp(flag.mean,'bickley_jet') 
+            if strcmp(flag.mean,'bickley_jet')
                 Fh=1/sqrt(Ri_bulk);
                 kz_list=Fh_kz_list/Fh;
             end
@@ -338,7 +379,8 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_LHBLCF_figure6b_validation')
     plot_contour(data,plot_config);
     
     
-elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_DCB_figure4a')
+elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_DCB_figure4a') || ...
+        (strcmp(flag.post,'eig_stratified_spanwise_tanh_asymptotic') && strcmp(flag.mean,'tanh'))
     DCB_figure4a_Fh1=[0	0.189744
             0.238569	0.178917
             0.357853	0.164103
@@ -492,7 +534,7 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_DCB_figure5')
     plot_config.xlim_list=[1,0,4];
     plot_config.xtick_list=[1,0,1,2,3,4];
     plot_config.user_color_style_marker_list={'k-','r--','b-.','k^','rsquare','bo'};
-    plot_config.label_list={1,'$F_h k_z$','$\sigma$'};
+    plot_config.label_list={1,'$Fr\,k_z$','$\sigma$'};
     plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_bickley_DCB_figure5','.png'];
     plot_line(data,plot_config);
 elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_growth_rate_kx')
@@ -540,7 +582,7 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_growth_rate_kx')
         end
     end
 
-    writecell([headers; csv_data], 'eig_real_max_vs_kx.csv');
+    writecell([headers; csv_data], 'tanh_numerical_eig_real_max_vs_kx_Re_1e5_Pe_1e5.csv');
 
 elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_CLDM_figure1')
 
@@ -605,6 +647,10 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_CLDM_figure1')
     exportgraphics(gcf, 'Bickley_growth_rate_contours.pdf', ...
         'ContentType', 'vector');
 
+
+elseif any(strcmp(flag.post, {'eig_stratified_spanwise_tanh_asymptotic', ...
+        'eig_stratified_spanwise_bickley_asymptotic'}))
+    % Plot and save these modes in the asymptotic blocks below.
 else
     error('Wrong flag.post')
 end
@@ -613,6 +659,10 @@ end
 
 if flag.asymptotic
     for Ri_ind=1:length(flag.Ri_bulk_list)
+        if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+            % Evaluate asymptotics on the same physical kz grid as the eigensolver.
+            kz_list=Fh_kz_list*sqrt(flag.Ri_bulk_list(Ri_ind));
+        end
 
         %Get the eigenvector associated with kz=0. Here assume the first
         %value in kz_list is 0. Thus just take index=1 for the kz. 
@@ -648,40 +698,138 @@ if flag.asymptotic
         lambda_asymptotic{Ri_ind}=-1i*kx_list*c_asymptotic;
     end
 
-    if strcmp(flag.post,'eig_stratified_spanwise_tanh_DCB_figure4a')
+    if any(strcmp(flag.post, {'eig_stratified_spanwise_tanh_DCB_figure4a', ...
+            'eig_stratified_spanwise_tanh_asymptotic', 'eig_stratified_spanwise_bickley_asymptotic'}))
     
-        data{1}.x=kz_list;
-        data{1}.y=eig_real_max{1};
-        data{2}.x=kz_list;
-        data{2}.y=eig_real_max{2};
-        data{3}.x=kz_list;
-        data{3}.y=eig_real_max{3};
-        data{4}.x=DCB_figure4a_Fh1(:,1);
-        data{4}.y=DCB_figure4a_Fh1(:,2);
-        data{5}.x=DCB_figure4a_Fh01(:,1);
-        data{5}.y=DCB_figure4a_Fh01(:,2);
-        data{6}.x=DCB_figure4a_Fh005(:,1);
-        data{6}.y=DCB_figure4a_Fh005(:,2);
+        % Reuse the computed growth rates for each requested horizontal axis.
+        plot_axis_names={'kz'};
+        if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+            plot_axis_names={'kz','Fr_kz'};
+        end
+        for plot_axis_ind=1:numel(plot_axis_names)
+            csv_axis_name=plot_axis_names{plot_axis_ind};
+            plot_kz_list=kz_list;
+            data = cell(1,6); % Discard curves from earlier plots.
+            data{1}.x=plot_kz_list;
+            data{1}.y=eig_real_max{1};
+            data{2}.x=plot_kz_list;
+            data{2}.y=eig_real_max{2};
+            data{3}.x=plot_kz_list;
+            data{3}.y=eig_real_max{3};
+            % Asymptotic curves precede reference markers in plots and CSV files.
+            data{4}.x=plot_kz_list;
+            data{4}.y=real(lambda_asymptotic{1});
+            data{5}.x=plot_kz_list;
+            data{5}.y=real(lambda_asymptotic{2});
+            data{6}.x=plot_kz_list;
+            data{6}.y=real(lambda_asymptotic{3});
 
-        %asymptotic prediction based on Eq. (65) 
-        data{7}.x=kz_list;
-        data{7}.y=real(lambda_asymptotic{1});
-        data{8}.x=kz_list;
-        data{8}.y=real(lambda_asymptotic{2});
-        data{9}.x=kz_list;
-        data{9}.y=real(lambda_asymptotic{3});
+            if strcmp(flag.mean,'tanh')
+                data{7}.x=DCB_figure4a_Fh1(:,1);
+                data{7}.y=DCB_figure4a_Fh1(:,2);
+                data{8}.x=DCB_figure4a_Fh01(:,1);
+                data{8}.y=DCB_figure4a_Fh01(:,2);
+                data{9}.x=DCB_figure4a_Fh005(:,1);
+                data{9}.y=DCB_figure4a_Fh005(:,2);
+                csv_curve_types = {'Numerical', 'Asymptotic', 'DCB07'};
+                plot_config.user_color_style_marker_list={'k-','r-','b-','k--','r--','b--','k^','rsquare','bo'};
+            else
+                csv_curve_types = {'Numerical', 'Asymptotic'};
+                plot_config.user_color_style_marker_list={'k-','r--','b:','k-','r--','b:'};
+            end
+            plot_config.legend_list = {1};
+            for plot_curve_ind = 1:numel(data)
+                plot_Fr = 1/sqrt(flag.Ri_bulk_list(mod(plot_curve_ind-1,3)+1));
+                plot_config.legend_list{plot_curve_ind+1} = sprintf('%s, Fr=%g', ...
+                    csv_curve_types{ceil(plot_curve_ind/3)}, plot_Fr);
+            end
 
-        plot_config.Markerindex=3;
-        plot_config.loglog=[0,0];
-        plot_config.ylim_list=[1,0.02,0.2];
-        plot_config.ytick_list=[1,0,0.1,0.2];
-        plot_config.xlim_list=[1,0,20];
-        plot_config.xtick_list=[1,0,5,10,15,20];
-        plot_config.linewidth=2.5;
-        plot_config.user_color_style_marker_list={'k-','r-','b-','k^','rsquare','bo','k--','r--','b--'};
-        plot_config.label_list={1,'$k_z$','$\lambda$'};
-        plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_DCB_figure4a_asymptotic','.png'];
-        plot_line(data,plot_config);
+            if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+                for plot_curve_ind=1:6
+                    plot_Fr=1/sqrt(flag.Ri_bulk_list(mod(plot_curve_ind-1,3)+1));
+                    if strcmp(csv_axis_name,'Fr_kz')
+                        data{plot_curve_ind}.x=Fh_kz_list;
+                    else
+                        % Each Fr has its own physical kz grid, shared by both methods.
+                        data{plot_curve_ind}.x=Fh_kz_list/plot_Fr;
+                    end
+                end
+            end
+            plot_config.Markerindex=3;
+            plot_config.loglog=[0,0];
+            plot_config.ylim_list=[1,0.02,0.2];
+            plot_config.ytick_list=[1,0,0.1,0.2];
+            plot_config.xlim_list=[1,0,25];
+            plot_config.xtick_list=[1,0,5,10,15,20,25];
+            plot_config.linewidth=2.5;
+            plot_config.fontsize_legend=32;
+            plot_config.label_list={1,'$k_z$','$\lambda$'};
+            if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+                if strcmp(csv_axis_name,'Fr_kz')
+                    plot_config.label_list={1,'$Fr\,k_z$','$\lambda$'};
+                    plot_config.xlim_list=[1,0,4];
+                    plot_config.xtick_list=[1,0,1,2,3,4];
+                else
+                    plot_kz_max=max(Fh_kz_list)*sqrt(max(flag.Ri_bulk_list));
+                    plot_config.xlim_list=[1,0,plot_kz_max];
+                    plot_config.xtick_list=[1,linspace(0,plot_kz_max,5)];
+                end
+            end
+            plot_config.name= sprintf([flag.mean,'_growth_rate_vs_',csv_axis_name,'_asymptotic_Re_%g_Pe_%g_kx_%g.png'], ...
+                flag.Re_list(1), flag.Re_list(1)*flag.Pr_list(1), kx_list(1));
+            % if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+            %     % Distinct symbols/styles distinguish even exactly coincident curves.
+            %     plot_config.user_color_style_marker_list = ...
+            %         {'k-','r--','b:','k-','r--','b:'};
+            % end
+            plot_line(data,plot_config);
+        
+            if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+                % Exactly three markers per curve, with six interleaved phases.
+                plot_marker_count = 10;
+                plot_markers = {'o','s','^','+','x','d'};
+                plot_handles = flipud(findobj(gca,'Type','line'));
+                for plot_curve_ind = 1:6
+                    % Match plotted data rather than relying on pre-existing markers.
+                    plot_match = find(arrayfun(@(h) ...
+                        isequal(h.XData(:),data{plot_curve_ind}.x(:)) && ...
+                        isequal(h.YData(:),data{plot_curve_ind}.y(:)),plot_handles),1);
+                    if isempty(plot_match)
+                        continue;
+                    end
+                    plot_handle = plot_handles(plot_match);
+                    plot_handles(plot_match) = []; % Each curve is styled once.
+                    plot_point_count = numel(plot_handle.XData);
+                    plot_marker_phase = (plot_curve_ind-0.5)/6;
+                    plot_marker_fraction = ((0:plot_marker_count-1)+plot_marker_phase)/plot_marker_count;
+                    plot_marker_indices = 1 + round(plot_marker_fraction*(plot_point_count-1));
+                    plot_handle.Marker = plot_markers{plot_curve_ind};
+                    plot_handle.MarkerIndices = unique(plot_marker_indices);
+                    plot_handle.MarkerSize = 10;
+                    plot_handle.MarkerFaceColor = 'none';
+                end
+                % Refresh the saved figure after updating markers and legend symbols.
+                exportgraphics(gcf,plot_config.name,'Resolution',300, ...
+                    'Units','pixels','Padding',100,'BackgroundColor','white');
+            end
+
+            % Save every plotted curve as paired kz/lambda columns for replotting.
+            % Reference curves may have different lengths; unused cells stay blank.
+            csv_curve_count = numel(data);
+            csv_row_count = max(cellfun(@(curve) numel(curve.x), data(1:csv_curve_count)));
+            csv_export = cell(csv_row_count + 1, 2*csv_curve_count);
+            for csv_curve_ind = 1:csv_curve_count
+                csv_Fr = 1/sqrt(flag.Ri_bulk_list(mod(csv_curve_ind-1, 3) + 1));
+                csv_label = sprintf('%s Fr=%g', csv_curve_types{ceil(csv_curve_ind/3)}, csv_Fr);
+                csv_col = 2*csv_curve_ind - 1;
+                csv_export(1, csv_col:csv_col+1) = {[csv_label ', ' csv_axis_name], [csv_label ', lambda']};
+                csv_export(2:numel(data{csv_curve_ind}.x)+1, csv_col) = num2cell(data{csv_curve_ind}.x(:));
+                csv_export(2:numel(data{csv_curve_ind}.y)+1, csv_col+1) = num2cell(data{csv_curve_ind}.y(:));
+            end
+            csv_filename = sprintf([flag.mean,'_growth_rate_vs_',csv_axis_name,'_asymptotic_Re_%g_Pe_%g_kx_%g.csv'], ...
+                flag.Re_list(1), flag.Re_list(1)*flag.Pr_list(1), kx_list(1));
+            writecell(csv_export, csv_filename);
+        end % Horizontal-axis versions; no eigenvalues or asymptotics are recomputed.
         
     end 
 
@@ -690,6 +838,10 @@ end
 
 if flag.asymptotic_low_Pr
     for Ri_ind=1:length(flag.Ri_bulk_list)
+        if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+            % Evaluate asymptotics on the same physical kz grid as the eigensolver.
+            kz_list=Fh_kz_list*sqrt(flag.Ri_bulk_list(Ri_ind));
+        end
 
         %Get the eigenvector associated with kz=0. Here assume the first
         %value in kz_list is 0. Thus just take index=1 for the kz. 
@@ -734,34 +886,126 @@ if flag.asymptotic_low_Pr
         lambda_asymptotic{Ri_ind}=-1i*kx_list*c_asymptotic;
     end
 
-    if strcmp(flag.post,'eig_stratified_spanwise_tanh_DCB_figure4a')
+    if any(strcmp(flag.post, {'eig_stratified_spanwise_tanh_DCB_figure4a', ...
+            'eig_stratified_spanwise_tanh_asymptotic', 'eig_stratified_spanwise_bickley_asymptotic'}))
     
-        data{1}.x=kz_list;
-        data{1}.y=eig_real_max{1};
-        data{2}.x=kz_list;
-        data{2}.y=eig_real_max{2};
-        data{3}.x=kz_list;
-        data{3}.y=eig_real_max{3};
+        % Reuse the computed growth rates for each requested horizontal axis.
+        plot_axis_names={'kz'};
+        if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+            plot_axis_names={'kz','Fr_kz'};
+        end
+        for plot_axis_ind=1:numel(plot_axis_names)
+            csv_axis_name=plot_axis_names{plot_axis_ind};
+            plot_kz_list=kz_list;
+            data = cell(1,6); % Discard curves from earlier plots.
+            data{1}.x=plot_kz_list;
+            data{1}.y=eig_real_max{1};
+            data{2}.x=plot_kz_list;
+            data{2}.y=eig_real_max{2};
+            data{3}.x=plot_kz_list;
+            data{3}.y=eig_real_max{3};
 
-        %asymptotic prediction based on Eq. (65) 
-        data{4}.x=kz_list;
-        data{4}.y=real(lambda_asymptotic{1});
-        data{5}.x=kz_list;
-        data{5}.y=real(lambda_asymptotic{2});
-        data{6}.x=kz_list;
-        data{6}.y=real(lambda_asymptotic{3});
+            %asymptotic prediction based on Eq. (65) 
+            data{4}.x=plot_kz_list;
+            data{4}.y=real(lambda_asymptotic{1});
+            data{5}.x=plot_kz_list;
+            data{5}.y=real(lambda_asymptotic{2});
+            data{6}.x=plot_kz_list;
+            data{6}.y=real(lambda_asymptotic{3});
 
-        plot_config.Markerindex=3;
-        plot_config.loglog=[0,0];
-        plot_config.ylim_list=[1,0.02,0.2];
-        plot_config.ytick_list=[1,0,0.1,0.2];
-        plot_config.xlim_list=[1,0,5];
-        plot_config.xtick_list=[1,0,1,2,3,4,5];
-        plot_config.linewidth=2.5;
-        plot_config.user_color_style_marker_list={'k-','r-','b-','k--','r--','b--'};
-        plot_config.label_list={1,'$k_z$','$\lambda$'};
-        plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_DCB_figure4a_asymptotic_low_Pr','.png'];
-        plot_line(data,plot_config);
+            if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+                for plot_curve_ind=1:6
+                    plot_Fr=1/sqrt(flag.Ri_bulk_list(mod(plot_curve_ind-1,3)+1));
+                    if strcmp(csv_axis_name,'Fr_kz')
+                        data{plot_curve_ind}.x=Fh_kz_list;
+                    else
+                        % Each Fr has its own physical kz grid, shared by both methods.
+                        data{plot_curve_ind}.x=Fh_kz_list/plot_Fr;
+                    end
+                end
+            end
+            plot_config.Markerindex=3;
+            plot_config.loglog=[0,0];
+            plot_config.ylim_list=[1,0.02,0.2];
+            plot_config.ytick_list=[1,0,0.1,0.2];
+            plot_config.xlim_list=[1,0,5];
+            plot_config.xtick_list=[1,0,1,2,3,4,5];
+            plot_config.linewidth=2.5;
+            plot_config.user_color_style_marker_list = ...
+                    {'k-o','r--s','b:^','k-+','r--x','b:d'};
+            plot_config.legend_list = {1};
+            for plot_curve_ind = 1:6
+                plot_Fr = 1/sqrt(flag.Ri_bulk_list(mod(plot_curve_ind-1,3)+1));
+                plot_curve_types = {'Numerical', 'Asymptotic'};
+                plot_config.legend_list{plot_curve_ind+1} = sprintf('%s, Fr=%g', ...
+                    plot_curve_types{ceil(plot_curve_ind/3)}, plot_Fr);
+            end
+            plot_config.label_list={1,'$k_z$','$\lambda$'};
+            if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+                if strcmp(csv_axis_name,'Fr_kz')
+                    plot_config.label_list={1,'$Fr\,k_z$','$\lambda$'};
+                    plot_config.xlim_list=[1,0,4];
+                    plot_config.xtick_list=[1,0,1,2,3,4];
+                else
+                    plot_kz_max=max(Fh_kz_list)*sqrt(max(flag.Ri_bulk_list));
+                    plot_config.xlim_list=[1,0,plot_kz_max];
+                    plot_config.xtick_list=[1,linspace(0,plot_kz_max,5)];
+                end
+            end
+            plot_config.name=sprintf([flag.mean,'_growth_rate_vs_',csv_axis_name,'_asymptotic_low_Pr_Re_%g_Pe_%g_kx_%g.png'], ...
+                flag.Re_list(1), flag.Re_list(1)*flag.Pr_list(1), kx_list(1));
+            % if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+            %     % Distinct symbols/styles distinguish even exactly coincident curves.
+            %     plot_config.user_color_style_marker_list = ...
+            %         {'k-o','r--s','b:^','k-+','r--x','b:d'};
+            % end
+            plot_line(data,plot_config);
+            if strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
+                % Exactly three markers per curve, with six interleaved phases.
+                plot_marker_count = 10;
+                plot_markers = {'o','s','^','+','x','d'};
+                plot_handles = flipud(findobj(gca,'Type','line'));
+                for plot_curve_ind = 1:6
+                    % Match plotted data rather than relying on pre-existing markers.
+                    plot_match = find(arrayfun(@(h) ...
+                        isequal(h.XData(:),data{plot_curve_ind}.x(:)) && ...
+                        isequal(h.YData(:),data{plot_curve_ind}.y(:)),plot_handles),1);
+                    if isempty(plot_match)
+                        continue;
+                    end
+                    plot_handle = plot_handles(plot_match);
+                    plot_handles(plot_match) = []; % Each curve is styled once.
+                    plot_point_count = numel(plot_handle.XData);
+                    plot_marker_phase = (plot_curve_ind-0.5)/6;
+                    plot_marker_fraction = ((0:plot_marker_count-1)+plot_marker_phase)/plot_marker_count;
+                    plot_marker_indices = 1 + round(plot_marker_fraction*(plot_point_count-1));
+                    plot_handle.Marker = plot_markers{plot_curve_ind};
+                    plot_handle.MarkerIndices = unique(plot_marker_indices);
+                    plot_handle.MarkerSize = 10;
+                    plot_handle.MarkerFaceColor = 'none';
+                end
+                % Refresh the saved figure after updating markers and legend symbols.
+                exportgraphics(gcf,plot_config.name,'Resolution',300);
+            end
+
+            % Save every plotted curve as paired kz/lambda columns for replotting.
+            % Reference curves may have different lengths; unused cells stay blank.
+            csv_curve_types = {'Numerical', 'Asymptotic'};
+            csv_curve_count = 6;
+            csv_row_count = max(cellfun(@(curve) numel(curve.x), data(1:csv_curve_count)));
+            csv_export = cell(csv_row_count + 1, 2*csv_curve_count);
+            for csv_curve_ind = 1:csv_curve_count
+                csv_Fr = 1/sqrt(flag.Ri_bulk_list(mod(csv_curve_ind-1, 3) + 1));
+                csv_label = sprintf('%s Fr=%g', csv_curve_types{ceil(csv_curve_ind/3)}, csv_Fr);
+                csv_col = 2*csv_curve_ind - 1;
+                csv_export(1, csv_col:csv_col+1) = {[csv_label ', ' csv_axis_name], [csv_label ', lambda']};
+                csv_export(2:numel(data{csv_curve_ind}.x)+1, csv_col) = num2cell(data{csv_curve_ind}.x(:));
+                csv_export(2:numel(data{csv_curve_ind}.y)+1, csv_col+1) = num2cell(data{csv_curve_ind}.y(:));
+            end
+            csv_filename = sprintf([flag.mean,'_growth_rate_vs_',csv_axis_name,'_asymptotic_low_Pr_Re_%g_Pe_%g_kx_%g.csv'], ...
+                flag.Re_list(1), flag.Re_list(1)*flag.Pr_list(1), kx_list(1));
+            writecell(csv_export, csv_filename);
+        end % Horizontal-axis versions; no eigenvalues or asymptotics are recomputed.
         
     end 
 

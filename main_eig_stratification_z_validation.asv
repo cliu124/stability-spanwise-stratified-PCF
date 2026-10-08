@@ -16,8 +16,12 @@ flag.asymptotic=0;
 flag.asymptotic_low_Pr=0;
 
 %flag.post='eig_stratified_spanwise_tanh_DCB_figure4a'; 
-% flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
+%flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
 flag.post='eig_stratified_spanwise_tanh_growth_rate_kx';
+flag.post='eig_stratified_spanwise_bickley_paper'; 
+flag.post='eig_strat'
+%flag.post='eig_stratified_spanwise_bickley_CLDM_figure1';
+
 
 if strcmp(flag.post,'eig_stratified_FFLWL_figure5a_validation')
     
@@ -83,20 +87,33 @@ elseif strcmp(flag.post, 'eig_stratified_spanwise_tanh_growth_rate_kx')
    flag.Re_list=[100000];
    flag.Pr_list=[1];
    flag.Ri_bulk_list=1./[0.1,0.01].^2;
-   kx_list=linspace(0.01,1.2,20);
+   kx_list=linspace(0.001,1.05,200);
    kz_list=[0,2,4,6,8];
    Ny_full=202; %%32.
    flag.mean='tanh';
 
 elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_DCB_figure5')
-    flag.Re_list=[10000000];
+    flag.Re_list=[100000];
     flag.Pr_list=[1];
     flag.Ri_bulk_list=1./[1,0.1,0.05].^2;
     kx_list=0.9021;%linspace(0.01,2,20);
     Fh_kz_list=linspace(0.01,4,20);
+    % 
+    % flag.Ri_bulk_list=1;
+    % kx_list=0.9023;
+    % Fh_kz_list=0;
+
     Ny_full=402; 
     flag.mean='bickley_jet';
-   
+elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_CLDM_figure1')
+    flag.Re_list=100000;
+    flag.Pr_list=1;
+    flag.Ri_bulk_list=1;
+    kx_list=linspace(0.01,2,60);
+    Fh_kz_list=linspace(0.01,4,60);
+    Ny_full=202;
+    flag.mean='bickley_jet';
+
 else
     error('Wrong flag.post')
 end
@@ -480,15 +497,114 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_DCB_figure5')
     plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_bickley_DCB_figure5','.png'];
     plot_line(data,plot_config);
 elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_growth_rate_kx')
-    for Ri_ind=1:length(flag.Ri_list)
+    for Ri_ind=1:length(flag.Ri_bulk_list)
         for kz_ind=1:length(kz_list)
-            eig_real_max{Fr_ind};
+            eig_real_max{Ri_ind};
             data{kz_ind}.x=kx_list;
-            data{kz_ind}.y=eig_real_max{Fr_ind}(:,kz_ind);
+            data{kz_ind}.y=eig_real_max{Ri_ind}(:,kz_ind);
         end
-        
-        Fr=
+        Ri=flag.Ri_bulk_list(Ri_ind);
+        Fr=sqrt(1/Ri);
+        plot_config.Markerindex=3;
+        % plot_config.loglog=[0,0];
+        plot_config.ylim_list=[1,0,0.25];
+        plot_config.ytick_list=[1,0,0.05,0.1,0.15,0.2,0.25,0.3];
+        plot_config.xlim_list=[1,0,1.05];
+        plot_config.xtick_list=[1,0,0.2,0.4,0.6,0.8,1,1.2];
+        plot_config.user_color_style_marker_list={'k-','r--','b-.','m:','c-'};
+        plot_config.linewidth=2.5;
+        plot_config.legend_list={1,'$k_z=0$','$k_z=2$','$k_z=4$','$k_z=6$','$k_z=8$'};
+        % plot_config.user_color_style_marker_list={'#0072BD', '#D95319', '#EDB120', '#7E2F8E', '#77AC30'};
+        plot_config.label_list={1,'$k_x$','$\lambda$'};
+        plot_config.name=['eig_stratified_spanwise_stratification_z_tanh_growth_rate_kx_Fr=',num2str(Fr),'.png'];
+        plot_line(data,plot_config);
     end
+
+   
+    csv_data = num2cell(kx_list(:));
+    headers = {'kx'};
+
+    for Ri_ind = 1:length(flag.Ri_bulk_list)
+        Fr = sqrt(1 / flag.Ri_bulk_list(Ri_ind));
+
+        % Two empty columns between groups
+        if Ri_ind > 1
+            csv_data = [csv_data, repmat({''}, length(kx_list), 2)];
+            headers = [headers, {'', ''}];
+        end
+
+        csv_data = [csv_data, num2cell(eig_real_max{Ri_ind})];
+
+        for kz_ind = 1:length(kz_list)
+            headers{end+1} = sprintf('Fr=%g, kz=%g', ...
+                Fr, kz_list(kz_ind));
+        end
+    end
+
+    writecell([headers; csv_data], 'tanh_numerical_eig_real_max_vs_kx_Re_1e5_Pe_1e5.csv');
+
+elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_CLDM_figure1')
+
+    % Transpose so rows correspond to the vertical axis (kz)
+    growth_rate = real(eig_real_max{Ri_ind}).';
+
+    figure('Color', 'w', 'Position', [100, 100, 800, 700]);
+    hold on;
+
+    % Digitized reference: solid black lines
+    for lev = 0.07:0.02:0.15
+        filename = fullfile(sprintf('contour_%.2f.csv', lev));
+        T = readtable(filename);
+
+        plot(T.kx, T.kz, 'k-', 'LineWidth', 1.0, ...
+            'HandleVisibility', 'off');
+    end
+
+    % Numerical results: dashed red contours
+    levels = 0.01:0.01:0.15;
+
+    [C, h] = contour(kx_list, kz_list, growth_rate, levels, ...
+        'LineColor', [0.85, 0.1, 0.1], ...
+        'LineStyle', '--', ...
+        'LineWidth', 1.0, ...
+        'HandleVisibility', 'off');
+
+    clabel(C, h, ...
+        'FontName', 'Times New Roman', ...
+        'FontSize', 13, ...
+        'Color', [0.85, 0.1, 0.1], ...
+        'LabelSpacing', 350);
+
+    % Legend entries
+    h_ref = plot(nan, nan, 'k-', 'LineWidth', 1.0);
+    h_num = plot(nan, nan, '--', ...
+        'Color', [0.85, 0.1, 0.1], 'LineWidth', 1.0);
+
+    legend([h_ref, h_num], ...
+        {'Digitized reference (0.07–0.15)', 'Numerical results'}, ...
+        'Location', 'northeast', 'Box', 'off');
+
+    xlabel('$k_x$', 'Interpreter', 'latex', 'FontSize', 20);
+
+    % Your kz corresponds to ky in the reference figure
+    ylabel('$k_y$', 'Interpreter', 'latex', ...
+        'FontSize', 20, 'Rotation', 0);
+
+    set(gca, ...
+        'FontName', 'Times New Roman', ...
+        'FontSize', 15, ...
+        'LineWidth', 0.8, ...
+        'TickDir', 'in', ...
+        'Box', 'on', ...
+        'XLim', [0, 2], ...
+        'YLim', [0, 10], ...
+        'XTick', 0:0.5:2, ...
+        'YTick', 0:1:10);
+
+    grid off;
+
+    exportgraphics(gcf, 'Bickley_growth_rate_contours.pdf', ...
+        'ContentType', 'vector');
 
 else
     error('Wrong flag.post')
@@ -567,6 +683,24 @@ if flag.asymptotic
         plot_config.label_list={1,'$k_z$','$\lambda$'};
         plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_DCB_figure4a_asymptotic','.png'];
         plot_line(data,plot_config);
+
+        % Save every plotted curve as paired kz/lambda columns for replotting.
+        % Reference curves may have different lengths; unused cells stay blank.
+        csv_curve_types = {'numerical', 'reference', 'asymptotic'};
+        csv_curve_count = 9;
+        csv_row_count = max(cellfun(@(curve) numel(curve.x), data(1:csv_curve_count)));
+        csv_export = cell(csv_row_count + 1, 2*csv_curve_count);
+        for csv_curve_ind = 1:csv_curve_count
+            csv_Fr = 1/sqrt(flag.Ri_bulk_list(mod(csv_curve_ind-1, 3) + 1));
+            csv_label = sprintf('%s Fr=%g', csv_curve_types{ceil(csv_curve_ind/3)}, csv_Fr);
+            csv_col = 2*csv_curve_ind - 1;
+            csv_export(1, csv_col:csv_col+1) = {[csv_label ', kz'], [csv_label ', lambda']};
+            csv_export(2:numel(data{csv_curve_ind}.x)+1, csv_col) = num2cell(data{csv_curve_ind}.x(:));
+            csv_export(2:numel(data{csv_curve_ind}.y)+1, csv_col+1) = num2cell(data{csv_curve_ind}.y(:));
+        end
+        csv_filename = sprintf('tanh_growth_rate_vs_kz_asymptotic_Re_%g_Pe_%g_kx_%g.csv', ...
+            flag.Re_list(1), flag.Re_list(1)*flag.Pr_list(1), kx_list(1));
+        writecell(csv_export, csv_filename);
         
     end 
 
@@ -647,6 +781,24 @@ if flag.asymptotic_low_Pr
         plot_config.label_list={1,'$k_z$','$\lambda$'};
         plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_DCB_figure4a_asymptotic_low_Pr','.png'];
         plot_line(data,plot_config);
+
+        % Save every plotted curve as paired kz/lambda columns for replotting.
+        % Reference curves may have different lengths; unused cells stay blank.
+        csv_curve_types = {'numerical', 'asymptotic'};
+        csv_curve_count = 6;
+        csv_row_count = max(cellfun(@(curve) numel(curve.x), data(1:csv_curve_count)));
+        csv_export = cell(csv_row_count + 1, 2*csv_curve_count);
+        for csv_curve_ind = 1:csv_curve_count
+            csv_Fr = 1/sqrt(flag.Ri_bulk_list(mod(csv_curve_ind-1, 3) + 1));
+            csv_label = sprintf('%s Fr=%g', csv_curve_types{ceil(csv_curve_ind/3)}, csv_Fr);
+            csv_col = 2*csv_curve_ind - 1;
+            csv_export(1, csv_col:csv_col+1) = {[csv_label ', kz'], [csv_label ', lambda']};
+            csv_export(2:numel(data{csv_curve_ind}.x)+1, csv_col) = num2cell(data{csv_curve_ind}.x(:));
+            csv_export(2:numel(data{csv_curve_ind}.y)+1, csv_col+1) = num2cell(data{csv_curve_ind}.y(:));
+        end
+        csv_filename = sprintf('tanh_growth_rate_vs_kz_asymptotic_low_Pr_Re_%g_Pe_%g_kx_%g.csv', ...
+            flag.Re_list(1), flag.Re_list(1)*flag.Pr_list(1), kx_list(1));
+        writecell(csv_export, csv_filename);
         
     end 
 
