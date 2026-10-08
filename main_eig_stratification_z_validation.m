@@ -12,10 +12,15 @@ flag.rotation_list=0; %In this code, all rotation number is zero.
 % 'eig_stratified_spanwise_tanh_DCB_figure4a',... tanh profile
 % 'eig_stratified_spanwise_bickley_DCB_figure5'% Bickley Jet
 
-flag.asymptotic=1;
+flag.asymptotic=0;
+flag.asymptotic_low_Pr=0;
 
-flag.post='eig_stratified_spanwise_tanh_DCB_figure4a'; 
-% flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
+%flag.post='eig_stratified_spanwise_tanh_DCB_figure4a'; 
+%flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
+flag.post='eig_stratified_spanwise_tanh_growth_rate_kx';
+
+%flag.post='eig_stratified_spanwise_bickley_CLDM_figure1';
+
 
 if strcmp(flag.post,'eig_stratified_FFLWL_figure5a_validation')
     
@@ -67,21 +72,47 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_LHBLCF_figure6b_validation')
    
 elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_DCB_figure4a')
    flag.Re_list=[100000];
-   flag.Pr_list=[1];
+   flag.Pr_list=[0.000001];
    flag.Ri_bulk_list=1./[1,0.1,0.05].^2;
    kx_list=0.4449;
-   kz_list=linspace(0,18,100);
+   if flag.Pr_list<0.01
+       kz_list=linspace(0,5,100);
+   else
+       kz_list=linspace(0,18,100);
+   end
    Ny_full=202; %%32.
    flag.mean='tanh';
+elseif strcmp(flag.post, 'eig_stratified_spanwise_tanh_growth_rate_kx')
+   flag.Re_list=[100000];
+   flag.Pr_list=[1];
+   flag.Ri_bulk_list=1./[0.1,0.01].^2;
+   kx_list=linspace(0.001,1.05,200);
+   kz_list=[0,2,4,6,8];
+   Ny_full=202; %%32.
+   flag.mean='tanh';
+
 elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_DCB_figure5')
-    flag.Re_list=[10000000];
+    flag.Re_list=[100000];
     flag.Pr_list=[1];
     flag.Ri_bulk_list=1./[1,0.1,0.05].^2;
     kx_list=0.9021;%linspace(0.01,2,20);
     Fh_kz_list=linspace(0.01,4,20);
+    % 
+    % flag.Ri_bulk_list=1;
+    % kx_list=0.9023;
+    % Fh_kz_list=0;
+
     Ny_full=402; 
     flag.mean='bickley_jet';
-   
+elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_CLDM_figure1')
+    flag.Re_list=100000;
+    flag.Pr_list=1;
+    flag.Ri_bulk_list=1;
+    kx_list=linspace(0.01,2,60);
+    Fh_kz_list=linspace(0.01,4,60);
+    Ny_full=202;
+    flag.mean='bickley_jet';
+
 else
     error('Wrong flag.post')
 end
@@ -464,12 +495,121 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_DCB_figure5')
     plot_config.label_list={1,'$F_h k_z$','$\sigma$'};
     plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_bickley_DCB_figure5','.png'];
     plot_line(data,plot_config);
+elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_growth_rate_kx')
+    for Ri_ind=1:length(flag.Ri_bulk_list)
+        for kz_ind=1:length(kz_list)
+            eig_real_max{Ri_ind};
+            data{kz_ind}.x=kx_list;
+            data{kz_ind}.y=eig_real_max{Ri_ind}(:,kz_ind);
+        end
+        Ri=flag.Ri_bulk_list(Ri_ind);
+        Fr=sqrt(1/Ri);
+        plot_config.Markerindex=3;
+        % plot_config.loglog=[0,0];
+        plot_config.ylim_list=[1,0,0.25];
+        plot_config.ytick_list=[1,0,0.05,0.1,0.15,0.2,0.25,0.3];
+        plot_config.xlim_list=[1,0,1.05];
+        plot_config.xtick_list=[1,0,0.2,0.4,0.6,0.8,1,1.2];
+        plot_config.user_color_style_marker_list={'k-','r--','b-.','m:','c-'};
+        plot_config.linewidth=2.5;
+        plot_config.legend_list={1,'$k_z=0$','$k_z=2$','$k_z=4$','$k_z=6$','$k_z=8$'};
+        % plot_config.user_color_style_marker_list={'#0072BD', '#D95319', '#EDB120', '#7E2F8E', '#77AC30'};
+        plot_config.label_list={1,'$k_x$','$\lambda$'};
+        plot_config.name=['eig_stratified_spanwise_stratification_z_tanh_growth_rate_kx_Fr=',num2str(Fr),'.png'];
+        plot_line(data,plot_config);
+    end
+
+   
+    csv_data = num2cell(kx_list(:));
+    headers = {'kx'};
+
+    for Ri_ind = 1:length(flag.Ri_bulk_list)
+        Fr = sqrt(1 / flag.Ri_bulk_list(Ri_ind));
+
+        % Two empty columns between groups
+        if Ri_ind > 1
+            csv_data = [csv_data, repmat({''}, length(kx_list), 2)];
+            headers = [headers, {'', ''}];
+        end
+
+        csv_data = [csv_data, num2cell(eig_real_max{Ri_ind})];
+
+        for kz_ind = 1:length(kz_list)
+            headers{end+1} = sprintf('Fr=%g, kz=%g', ...
+                Fr, kz_list(kz_ind));
+        end
+    end
+
+    writecell([headers; csv_data], 'eig_real_max_vs_kx.csv');
+
+elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_CLDM_figure1')
+
+    % Transpose so rows correspond to the vertical axis (kz)
+    growth_rate = real(eig_real_max{Ri_ind}).';
+
+    figure('Color', 'w', 'Position', [100, 100, 800, 700]);
+    hold on;
+
+    % Digitized reference: solid black lines
+    for lev = 0.07:0.02:0.15
+        filename = fullfile(sprintf('contour_%.2f.csv', lev));
+        T = readtable(filename);
+
+        plot(T.kx, T.kz, 'k-', 'LineWidth', 1.0, ...
+            'HandleVisibility', 'off');
+    end
+
+    % Numerical results: dashed red contours
+    levels = 0.01:0.01:0.15;
+
+    [C, h] = contour(kx_list, kz_list, growth_rate, levels, ...
+        'LineColor', [0.85, 0.1, 0.1], ...
+        'LineStyle', '--', ...
+        'LineWidth', 1.0, ...
+        'HandleVisibility', 'off');
+
+    clabel(C, h, ...
+        'FontName', 'Times New Roman', ...
+        'FontSize', 13, ...
+        'Color', [0.85, 0.1, 0.1], ...
+        'LabelSpacing', 350);
+
+    % Legend entries
+    h_ref = plot(nan, nan, 'k-', 'LineWidth', 1.0);
+    h_num = plot(nan, nan, '--', ...
+        'Color', [0.85, 0.1, 0.1], 'LineWidth', 1.0);
+
+    legend([h_ref, h_num], ...
+        {'Digitized reference (0.07–0.15)', 'Numerical results'}, ...
+        'Location', 'northeast', 'Box', 'off');
+
+    xlabel('$k_x$', 'Interpreter', 'latex', 'FontSize', 20);
+
+    % Your kz corresponds to ky in the reference figure
+    ylabel('$k_y$', 'Interpreter', 'latex', ...
+        'FontSize', 20, 'Rotation', 0);
+
+    set(gca, ...
+        'FontName', 'Times New Roman', ...
+        'FontSize', 15, ...
+        'LineWidth', 0.8, ...
+        'TickDir', 'in', ...
+        'Box', 'on', ...
+        'XLim', [0, 2], ...
+        'YLim', [0, 10], ...
+        'XTick', 0:0.5:2, ...
+        'YTick', 0:1:10);
+
+    grid off;
+
+    exportgraphics(gcf, 'Bickley_growth_rate_contours.pdf', ...
+        'ContentType', 'vector');
 
 else
     error('Wrong flag.post')
 end
 
-save('data_tanh');
+% save('data_tanh');
 
 if flag.asymptotic
     for Ri_ind=1:length(flag.Ri_bulk_list)
@@ -537,9 +677,90 @@ if flag.asymptotic
         plot_config.ytick_list=[1,0,0.1,0.2];
         plot_config.xlim_list=[1,0,20];
         plot_config.xtick_list=[1,0,5,10,15,20];
+        plot_config.linewidth=2.5;
         plot_config.user_color_style_marker_list={'k-','r-','b-','k^','rsquare','bo','k--','r--','b--'};
         plot_config.label_list={1,'$k_z$','$\lambda$'};
         plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_DCB_figure4a_asymptotic','.png'];
+        plot_line(data,plot_config);
+        
+    end 
+
+end
+
+
+if flag.asymptotic_low_Pr
+    for Ri_ind=1:length(flag.Ri_bulk_list)
+
+        %Get the eigenvector associated with kz=0. Here assume the first
+        %value in kz_list is 0. Thus just take index=1 for the kz. 
+        eig_vec_kz0=eig_vec{1,1,Ri_ind,1,1,1};
+        eig_val_kz0=eig_val{1,1,Ri_ind,1,1,1};
+        [val,ind]=max(real(eig_val_kz0)); %get the index with the maximal real part
+        
+        lambda_kz0=eig_val_kz0(ind); %get the lambda for most unstable mode
+        c_kz0=lambda_kz0/(-1i*kx_list); %get corresponding c valie, lambda=-1i*kx*c
+
+        v_kz0=eig_vec_kz0(1:Ny_full-2); %get the v velocity mode. 
+        u_kz0=-D1_bc*v_kz0/(1i*kx_list); %solve u velocity using continuity equation with kz=0
+
+        dpdy_kz0=-(1i*kx_list*(U_bar-c_kz0).*v_kz0-1/Re*(D2_bc-kx^2*I_bc)*v_kz0);
+        p_kz0=(1i*kx_list*(U_bar-c_kz0).*u_kz0+v_kz0.*d_U_bar-1/Re*(D2_bc-kx^2*I_bc)*u_kz0)/(-1i*kx_list);
+        
+        for y_ind=1:Ny_full-2
+            %to check directly performing the integration also match p_kz0
+            %computed from x-momentum equation. p_kz0_int is not used. 
+            p_kz0_int(y_ind)=sum(dpdy_kz0(y_ind:end).*y_diff_unbounded_bc.weight(y_ind:end));
+        end
+
+        int_weight=y_diff_unbounded_bc.weight; %integration weight. 
+        Pe=flag.Re_list*flag.Pr_list;
+        %below is new for low Prandtl number cases
+        for kz_ind=1:length(kz_list)
+            kx=kx_list(1);
+            kz=kz_list(kz_ind);
+            Dp=D2_bc*p_kz0-(kx^2+kz^2)*p_kz0;
+            %Dp=D2_bc*p_kz0-(kx^2)*p_kz0;
+
+            num=kz^2*sum((p_kz0.*Dp)./(U_bar-c_kz0).*int_weight);
+            den=sum((2*p_kz0.*dpdy_kz0)./(U_bar-c_kz0).^4.*d_U_bar/(1i*kx).*int_weight);
+            %c1_const=kx_list^2/2*sum(p_kz0.^2.*int_weight)/den; %formula of c1 without kz^2
+        
+            % c1_const_list(Ri_ind)=c1_const; 
+            c1_asymptotic(kz_ind)=num/den; %c1 as a function of kz
+        
+        end
+        Fr2=1/flag.Ri_bulk_list(Ri_ind);
+        c_asymptotic=c_kz0+Fr2/Pe*c1_asymptotic;
+        lambda_asymptotic{Ri_ind}=-1i*kx_list*c_asymptotic;
+    end
+
+    if strcmp(flag.post,'eig_stratified_spanwise_tanh_DCB_figure4a')
+    
+        data{1}.x=kz_list;
+        data{1}.y=eig_real_max{1};
+        data{2}.x=kz_list;
+        data{2}.y=eig_real_max{2};
+        data{3}.x=kz_list;
+        data{3}.y=eig_real_max{3};
+
+        %asymptotic prediction based on Eq. (65) 
+        data{4}.x=kz_list;
+        data{4}.y=real(lambda_asymptotic{1});
+        data{5}.x=kz_list;
+        data{5}.y=real(lambda_asymptotic{2});
+        data{6}.x=kz_list;
+        data{6}.y=real(lambda_asymptotic{3});
+
+        plot_config.Markerindex=3;
+        plot_config.loglog=[0,0];
+        plot_config.ylim_list=[1,0.02,0.2];
+        plot_config.ytick_list=[1,0,0.1,0.2];
+        plot_config.xlim_list=[1,0,5];
+        plot_config.xtick_list=[1,0,1,2,3,4,5];
+        plot_config.linewidth=2.5;
+        plot_config.user_color_style_marker_list={'k-','r-','b-','k--','r--','b--'};
+        plot_config.label_list={1,'$k_z$','$\lambda$'};
+        plot_config.name=['eig_stratified_spanwise_validation_stratification_z_tanh_DCB_figure4a_asymptotic_low_Pr','.png'];
         plot_line(data,plot_config);
         
     end 
