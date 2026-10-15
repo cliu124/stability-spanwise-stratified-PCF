@@ -1,4 +1,4 @@
-function plot_kz0_eigenfunctions(y, v, u, p, flag, Ri_ind, kx)
+function plot_kz0_eigenfunctions(y, v, u, p, flag, Ri_ind, kx, f0, dpdy, U_bar, d_U_bar, dd_U_bar)
 % Plot and export the original complex eigenfunctions without normalization.
 % Their common eigenvector amplitude and phase are retained.
 
@@ -45,7 +45,7 @@ ylabel(ax,'$y$','Interpreter','latex','FontSize',28);
 legend(ax,'show','Interpreter','latex','Location','southeast', ...
     'BackgroundAlpha',0.5,'FontSize',24);
 set(ax,'FontName','Times New Roman','FontSize',24,'Box','on');
-ylim(ax,[-20,20]);
+ylim(ax,[-10,10]);
 xlim(ax,[-0.2,0.2]);
 ax.XLabel.FontSize=28;
 ax.YLabel.FontSize=28;
@@ -58,7 +58,31 @@ grid(ax,'on');
 exportgraphics(fig,fullfile(output_folder,[output_stem '.png']),'Resolution',300, ...
     'Units','pixels','Padding',100,'BackgroundColor','white');
 
-csv_table = array2table([y_plot,curve_values],'VariableNames', ...
-    {'y','v_real','v_imag','u_real','u_imag','p_real','p_imag'});
+fig_f0 = figure('Color','white');
+ax_f0 = axes('Parent',fig_f0);
+hold(ax_f0,'on');
+f0_curves = [real(f0(:)), imag(f0(:)), dd_U_bar(:)];
+f0_labels = {'$\mathrm{Re}[f_0]$','$\mathrm{Im}[f_0]$','$\overline{U}^{\prime\prime}$'};
+for curve_ind = 1:3
+    plot(ax_f0,f0_curves(:,curve_ind),y_plot,styles{curve_ind}, ...
+        'LineWidth',1.5,'MarkerSize',8, ...
+        'MarkerIndices',unique(round(linspace(1,numel(y_plot),6))), ...
+        'DisplayName',f0_labels{curve_ind});
+end
+xlabel(ax_f0,'Profile value','Interpreter','latex','FontSize',28);
+ylabel(ax_f0,'$y$','Interpreter','latex','FontSize',28);
+legend(ax_f0,'show','Interpreter','latex','Location','best', ...
+    'BackgroundAlpha',0.5,'FontSize',24);
+set(ax_f0,'FontName','Times New Roman','FontSize',24,'Box','on');
+ylim(ax_f0,[-10,10]);
+title(ax_f0,plot_title,'Interpreter','latex','FontSize',24);
+grid(ax_f0,'on');
+exportgraphics(fig_f0,fullfile(output_folder,[output_stem '_f0.png']),'Resolution',300, ...
+    'Units','pixels','Padding',100,'BackgroundColor','white');
+
+csv_table = array2table([y_plot,curve_values,real(f0(:)),imag(f0(:)), ...
+    real(dpdy(:)),imag(dpdy(:)),U_bar(:),d_U_bar(:),dd_U_bar(:)],'VariableNames', ...
+    {'y','v_real','v_imag','u_real','u_imag','p_real','p_imag', ...
+    'f0_real','f0_imag','dpdy_real','dpdy_imag','U_bar','d_U_bar','dd_U_bar'});
 writetable(csv_table,fullfile(output_folder,[output_stem '.csv']));
 end

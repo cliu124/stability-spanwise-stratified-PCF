@@ -22,9 +22,9 @@ flag.asymptotic_low_Pr=0;
 
 %flag.post='eig_stratified_spanwise_tanh_DCB_figure4a'; 
 %flag.post='eig_stratified_spanwise_bickley_DCB_figure5';
-flag.post='eig_stratified_spanwise_tanh_growth_rate_kx';
+%flag.post='eig_stratified_spanwise_tanh_growth_rate_kx';
 
-%flag.post='eig_stratified_spanwise_tanh_asymptotic';
+flag.post='eig_stratified_spanwise_tanh_asymptotic';
 %flag.post='eig_stratified_spanwise_bickley_asymptotic'; 
 %flag.post='eig_stratified_spanwise_bickley_growth_rate_kx';
 %flag.post='eig_stratified_spanwise_bickley_CLDM_figure1';
@@ -134,9 +134,9 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_asymptotic')
     %compare the asymptotic with the numerical results for tanh profile
     flag.Re_list=[1e5];
     %flag.Pr_list=[0.000001];
-    %flag.Pr_list=1;
+    flag.Pr_list=1;
     %flag.Pr_list=1e-5;
-    flag.Pr_list=1e-6;
+    %flag.Pr_list=1e-6;
     flag.Ri_bulk_list=1./[1,0.1,0.05].^2;
     kx_list=0.4449;
     if flag.Pr_list<0.01
@@ -145,10 +145,12 @@ elseif strcmp(flag.post,'eig_stratified_spanwise_tanh_asymptotic')
         flag.asymptotic=0;
     else
         kz_list=linspace(0,18,100);
+        %kz_list=18;
+        %kz_list=kz_list(10);
         flag.asymptotic_low_Pr=0;
         flag.asymptotic=1;
     end
-    Ny_full=202; %%32.
+    Ny_full=203; %%32.
     flag.mean='tanh';
 elseif strcmp(flag.post,'eig_stratified_spanwise_bickley_asymptotic')
     %compare the asymptotic with the numerical results for bickley jet
@@ -194,6 +196,12 @@ else
     % Existing validation plots over parameter sweeps combine several cases.
     flag.results_folder=pwd;
 end
+
+[eig_val,eig_vec,eig_real_max,eig_imag_max,eig_real_max_kx_kz]=eig_solve(flag,Ny_full,kx_list,kz_list)
+
+
+function [eig_val,eig_vec,eig_real_max,eig_imag_max,eig_real_max_kx_kz]=eig_solve(flag,Ny_full,kx_list,kz_list)
+
 [y_list_full, DM] = chebdif(Ny_full, 4);
 D1_full=DM(:,:,1);
 D2_full=DM(:,:,2);
@@ -303,7 +311,13 @@ for re_ind=1:length(flag.Re_list)
                         eig_val{re_ind,rotation_ind,Ri_ind,Pr_ind,kx_ind,kz_ind}=diag(D);
                      
                         [eig_real_max{re_ind,rotation_ind,Ri_ind,Pr_ind}(kx_ind,kz_ind),ind]=max(real(diag(D)));                          
-                        eig_imag_max{re_ind,rotation_ind,Ri_ind,Pr_ind}(kx_ind,kz_ind)=imag(D(ind,ind));
+                        %eig_imag_max{re_ind,rotation_ind,Ri_ind,Pr_ind}(kx_ind,kz_ind)=imag(D(ind,ind));
+                        % 
+                        if max(real(diag(D)))>0
+                            eig_imag_max{re_ind,rotation_ind,Ri_ind,Pr_ind}(kx_ind,kz_ind)=imag(D(ind,ind));
+                        else 
+                            eig_imag_max{re_ind,rotation_ind,Ri_ind,Pr_ind}(kx_ind,kz_ind)=NaN;
+                        end
                         eig_vec{re_ind,rotation_ind,Ri_ind,Pr_ind,kx_ind,kz_ind}=V(:,ind);
                     end
                 end
@@ -312,6 +326,8 @@ for re_ind=1:length(flag.Re_list)
             end
         end
     end
+end
+
 end
 
 
@@ -723,6 +739,7 @@ if flag.asymptotic
         dpdy_kz0=-(1i*kx_list*(U_bar-c_kz0).*v_kz0-1/Re*(D2_bc-kx^2*I_bc)*v_kz0);
         p_kz0=(1i*kx_list*(U_bar-c_kz0).*u_kz0+v_kz0.*d_U_bar-1/Re*(D2_bc-kx^2*I_bc)*u_kz0)/(-1i*kx_list);
         
+        f0_kz0=1i*dpdy_kz0/kx_list./((U_bar-c_kz0).^2);
         
         for y_ind=1:Ny_full-2
             %to check directly performing the integration also match p_kz0
@@ -742,7 +759,8 @@ if flag.asymptotic
         lambda_asymptotic{Ri_ind}=-1i*kx_list*c_asymptotic;
 
         % Plot/export raw kz=0 eigenfunctions; retain relative magnitudes.
-        plot_kz0_eigenfunctions(y_bc,v_kz0,u_kz0,p_kz0,flag,Ri_ind,kx_list(1));
+        plot_kz0_eigenfunctions(y_bc,v_kz0,u_kz0,p_kz0,flag,Ri_ind,kx_list(1), ...
+            f0_kz0,dpdy_kz0,U_bar,d_U_bar,dd_U_bar);
     end
 
     if any(strcmp(flag.post, {'eig_stratified_spanwise_tanh_DCB_figure4a', ...
@@ -975,7 +993,9 @@ if flag.asymptotic_low_Pr
         lambda_asymptotic{Ri_ind}=-1i*kx_list*c_asymptotic;
 
         % Plot/export raw kz=0 eigenfunctions; retain relative magnitudes.
-        plot_kz0_eigenfunctions(y_bc,v_kz0,u_kz0,p_kz0,flag,Ri_ind,kx_list(1));
+        f0_kz0=1i*dpdy_kz0/kx_list./((U_bar-c_kz0).^2);
+        plot_kz0_eigenfunctions(y_bc,v_kz0,u_kz0,p_kz0,flag,Ri_ind,kx_list(1), ...
+            f0_kz0,dpdy_kz0,U_bar,d_U_bar,dd_U_bar);
     end
 
     if any(strcmp(flag.post, {'eig_stratified_spanwise_tanh_DCB_figure4a', ...
